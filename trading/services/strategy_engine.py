@@ -1,12 +1,12 @@
+from __future__ import annotations
+
 from django.conf import settings
 from django.utils import timezone
 from datetime import datetime, timedelta
 from typing import Dict, List, Tuple
 import logging
 from decimal import Decimal
-from trading.models import Stock, TradingSignal, RebalanceEvent
-from trading.services.momentum_calculator import get_momentum_calculator
-from trading.services.snaptrade_client import get_trading_executor
+from trading.models import MomentumScore, Stock, TradingSignal, RebalanceEvent
 from portfolio.models import Portfolio, Position
 
 logger= logging.getLogger(__name__)
@@ -14,10 +14,83 @@ logger= logging.getLogger(__name__)
 class MomentumTradingStrategy:
     def __init__(self, portfolio: Portfolio):
         self.portfolio= portfolio
+        from trading.services.momentum_calculator import get_momentum_calculator
+        from trading.services.snaptrade_client import get_trading_executor
+
         self.momentum_calculator= get_momentum_calculator()
         self.trading_executor= get_trading_executor()
         self.rebalance_frequency= getattr(settings, "REBALANCE_FREQUENCY", "weekly")
-    
+
+    @classmethod
+    def generate_signals_from_scores(
+        cls, portfolio: Portfolio, calculation_date=None
+    ) -> Tuple[List[TradingSignal], List[TradingSignal]]:
+        """Create recommendations from momentum scores already in the database."""
+        if calculation_date is None:
+            calculation_date = timezone.now().date()
+
+        scores = list(
+            MomentumScore.objects.filter(
+                calculation_date=calculation_date
+            ).select_related("stock").order_by("-momentum_score", "stock__ticker")
+        )
+        if not scores:
+            raise ValueError("Aucun score momentum disponible pour cette date.")
+
+        total_scores = len(scores)
+        for index, score in enumerate(scores):
+            score.rank = index + 1
+            score.quintile = min(5, (index * 5 // total_scores) + 1)
+            score.is_top_quintile = score.quintile == 1
+            score.save(update_fields=["rank", "quintile", "is_top_quintile"])
+
+        positions = {
+            position.stock_id: position
+            for position in portfolio.positions.filter(
+                quantity__gt=0
+            ).select_related("stock")
+        }
+        TradingSignal.objects.filter(
+            portfolio=portfolio, signal_date=calculation_date, is_executed=False
+        ).delete()
+
+        buy_scores = [
+            score for score in scores
+            if score.quintile == 1 and score.stock_id not in positions
+        ]
+        sell_scores = [
+            score for score in scores
+            if score.quintile == 5 and score.stock_id in positions
+        ]
+        cash = portfolio.current_cash or Decimal("0")
+        allocation = cash / len(buy_scores) if buy_scores else Decimal("0")
+
+        buy_signals = [
+            TradingSignal.objects.create(
+                stock=score.stock,
+                portfolio=portfolio,
+                signal_date=calculation_date,
+                signal_type="BUY",
+                momemtum_score=score,
+                target_value=allocation,
+                reason=f"Titre dans le quintile supérieur (rang {score.rank}).",
+            )
+            for score in buy_scores
+        ]
+        sell_signals = [
+            TradingSignal.objects.create(
+                stock=score.stock,
+                portfolio=portfolio,
+                signal_date=calculation_date,
+                signal_type="SELL",
+                momemtum_score=score,
+                target_quantity=positions[score.stock_id].quantity,
+                target_value=positions[score.stock_id].current_value,
+                reason=f"Position dans le quintile inférieur (rang {score.rank}).",
+            )
+            for score in sell_scores
+        ]
+        return buy_signals, sell_signals
     def should_rebalance(self) -> bool:
         last_rebalance= (
             RebalanceEvent.objects.filter(execution_status= "COMPLETED").order_by("-date").first()

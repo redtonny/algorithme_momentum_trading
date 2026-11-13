@@ -1,8 +1,11 @@
+from __future__ import annotations
+
 from django.conf import settings
 from snaptrade_client import Snaptrade
 from portfolio.models import Portfolio, Position
 from typing import List, Optional
-from trading.models import Stock, Trade
+from trading.models import Stock
+from portfolio.models import Trade
 from decimal import Decimal
 import datetime
 import logging
@@ -309,5 +312,5 @@ class TradingExecutor:
         # Reserve 5% cash buffer
         return portfolio.current_cash * Decimal("0.95")
     
-    def get_trading_executor () -> TradingExecutor:
-        return TradingExecutor()
+def get_trading_executor() -> TradingExecutor:
+    return TradingExecutor()

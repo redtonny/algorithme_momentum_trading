@@ -1,0 +1,41 @@
+{% extends "trading/base.html" %}
+
+{% block title %}Portefeuilles · Momentum Desk{% endblock %}
+{% block breadcrumb %}Portefeuilles{% endblock %}
+
+{% block content %}
+<div class="page-head">
+	<div>
+		<p class="eyebrow">Gestion du capital</p>
+		<h1>Portefeuilles</h1>
+		<p class="page-subtitle">Vue consolidée des portefeuilles actifs et de leurs positions.</p>
+	</div>
+	<a class="btn" href="{% url 'trading:create_portfolio' %}"><i class="bi bi-plus-lg"></i>Nouveau portefeuille</a>
+</div>
+
+<section class="surface">
+	<div class="surface-head"><h2>Vos portefeuilles</h2><span class="muted">{{ portfolios|length }} actif(s)</span></div>
+	{% if portfolios %}
+		<div class="table-wrap">
+			<table>
+				<thead><tr><th>Nom</th><th>Positions</th><th>Liquidités</th><th>Valeur totale</th><th>Capital initial</th><th>Créé le</th><th></th></tr></thead>
+				<tbody>
+				{% for portfolio in portfolios %}
+					<tr>
+						<td><a class="ticker" href="{% url 'trading:portfolio_detail' portfolio.id %}">{{ portfolio.name }}</a>{% if portfolio.description %}<br><span class="muted">{{ portfolio.description|truncatechars:48 }}</span>{% endif %}</td>
+						<td>{{ portfolio.positions.count }}</td>
+						<td>{{ portfolio.current_cash|floatformat:2 }}</td>
+						<td><strong>{{ portfolio.total_value|floatformat:2 }}</strong></td>
+						<td class="muted">{{ portfolio.initial_cash|floatformat:2 }}</td>
+						<td class="muted">{{ portfolio.created_at|date:"d/m/Y" }}</td>
+						<td><a class="text-link" href="{% url 'trading:portfolio_detail' portfolio.id %}" aria-label="Ouvrir {{ portfolio.name }}"><i class="bi bi-arrow-up-right"></i></a></td>
+					</tr>
+				{% endfor %}
+				</tbody>
+			</table>
+		</div>
+	{% else %}
+		<div class="empty-state"><i class="bi bi-wallet2"></i>Aucun portefeuille actif.<br><a class="text-link" href="{% url 'trading:create_portfolio' %}">Créer votre premier portefeuille</a></div>
+	{% endif %}
+</section>
+{% endblock %}

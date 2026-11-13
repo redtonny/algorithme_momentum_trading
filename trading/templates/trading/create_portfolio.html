@@ -1,0 +1,25 @@
+{% extends "trading/base.html" %}
+
+{% block title %}Nouveau portefeuille · Momentum Desk{% endblock %}
+{% block breadcrumb %}<a href="{% url 'trading:portfolio_list' %}">Portefeuilles</a> / Création{% endblock %}
+
+{% block content %}
+<div class="page-head">
+	<div>
+		<p class="eyebrow">Gestion du capital</p>
+		<h1>Nouveau portefeuille</h1>
+		<p class="page-subtitle">Définissez un nom et le capital de départ.</p>
+	</div>
+</div>
+
+<section class="surface form-surface">
+	<form method="post">
+		{% csrf_token %}
+		{{ form.as_p }}
+		<div class="button-row">
+			<button class="btn" type="submit"><i class="bi bi-check2"></i>Créer le portefeuille</button>
+			<a class="btn btn-secondary" href="{% url 'trading:portfolio_list' %}">Annuler</a>
+		</div>
+	</form>
+</section>
+{% endblock %}

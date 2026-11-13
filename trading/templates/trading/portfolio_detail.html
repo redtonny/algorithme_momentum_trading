@@ -1,0 +1,74 @@
+{% extends "trading/base.html" %}
+
+{% block title %}{{ portfolio.name }} · Momentum Desk{% endblock %}
+{% block breadcrumb %}<a href="{% url 'trading:portfolio_list' %}">Portefeuilles</a> / {{ portfolio.name }}{% endblock %}
+
+{% block content %}
+<div class="page-head">
+	<div>
+		<p class="eyebrow">Portefeuille</p>
+		<h1>{{ portfolio.name }}</h1>
+		<p class="page-subtitle">{{ portfolio.description|default:"Aucune description." }}</p>
+	</div>
+	<div class="button-row" style="margin-top: 0;">
+		<a class="btn btn-secondary" href="{% url 'trading:portfolio_list' %}"><i class="bi bi-arrow-left"></i>Retour</a>
+		<a class="btn btn-secondary" href="{% url 'trading:delete_portfolio' portfolio.id %}" aria-label="Supprimer le portefeuille"><i class="bi bi-trash3"></i></a>
+	</div>
+</div>
+
+<section class="detail-grid" aria-label="Résumé du portefeuille">
+	<article class="detail-stat"><span>Valeur totale</span><strong>{{ portfolio.total_value|floatformat:2 }}</strong></article>
+	<article class="detail-stat"><span>Liquidités</span><strong>{{ portfolio.current_cash|floatformat:2 }}</strong></article>
+	<article class="detail-stat"><span>Capital initial</span><strong>{{ portfolio.initial_cash|floatformat:2 }}</strong></article>
+</section>
+
+{% if latest_performance %}
+<section class="detail-grid" aria-label="Performance récente">
+	<article class="detail-stat"><span>Valeur au {{ latest_performance.date|date:"d/m/Y" }}</span><strong>{{ latest_performance.total_value|floatformat:2 }}</strong></article>
+	<article class="detail-stat"><span>Rendement du jour</span><strong>{{ latest_performance.daily_return|default:"—"|floatformat:4 }}</strong></article>
+	<article class="detail-stat"><span>Rendement cumulé</span><strong>{{ latest_performance.cumulative_return|default:"—"|floatformat:4 }}</strong></article>
+</section>
+{% endif %}
+
+<section class="surface" style="margin-bottom: 16px;">
+	<div class="surface-head"><h2>Positions</h2><span class="muted">{{ positions|length }} ligne(s)</span></div>
+	{% if positions %}
+		<div class="table-wrap"><table>
+			<thead><tr><th>Titre</th><th>Quantité</th><th>Coût moyen</th><th>Dernier prix</th><th>Valeur</th><th>P&amp;L latent</th></tr></thead>
+			<tbody>{% for position in positions %}
+				<tr>
+					<td><span class="ticker">{{ position.stock.ticker }}</span><br><span class="muted">{{ position.stock.name|default:"—" }}</span></td>
+					<td>{{ position.quantity }}</td>
+					<td>{{ position.average_cost|floatformat:2 }}</td>
+					<td>{% if position.current_price %}{{ position.current_price|floatformat:2 }}{% else %}—{% endif %}</td>
+					<td><strong>{{ position.current_value|floatformat:2 }}</strong></td>
+					<td class="{% if position.unrealized_pnl >= 0 %}positive{% else %}negative{% endif %}">{{ position.unrealized_pnl|floatformat:2 }} <span class="muted">({{ position.unrealized_pnl_percent|floatformat:2 }}%)</span></td>
+				</tr>
+			{% endfor %}</tbody>
+		</table></div>
+	{% else %}
+		<div class="empty-state"><i class="bi bi-pie-chart"></i>Aucune position enregistrée.</div>
+	{% endif %}
+</section>
+
+<section class="surface">
+	<div class="surface-head"><h2>Ordres récents</h2><span class="muted">8 derniers</span></div>
+	{% if trades %}
+		<div class="table-wrap"><table>
+			<thead><tr><th>Date</th><th>Titre</th><th>Sens</th><th>Quantité</th><th>Prix exécuté</th><th>Statut</th></tr></thead>
+			<tbody>{% for trade in trades %}
+				<tr>
+					<td class="muted">{{ trade.created_at|date:"d/m/Y H:i" }}</td>
+					<td class="ticker">{{ trade.stock.ticker }}</td>
+					<td class="{% if trade.trade_type == 'BUY' %}positive{% else %}negative{% endif %}">{{ trade.get_trade_type_display }}</td>
+					<td>{{ trade.filled_quantity|default:trade.quantity }}</td>
+					<td>{% if trade.filled_price %}{{ trade.filled_price|floatformat:2 }}{% else %}—{% endif %}</td>
+					<td><span class="badge">{{ trade.get_status_display }}</span></td>
+				</tr>
+			{% endfor %}</tbody>
+		</table></div>
+	{% else %}
+		<div class="empty-state"><i class="bi bi-receipt"></i>Aucun ordre enregistré.</div>
+	{% endif %}
+</section>
+{% endblock %}

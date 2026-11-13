@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from django.conf import settings
 from django.utils import timezone
 from datetime import datetime, timedelta
@@ -15,7 +17,7 @@ logger = logging.getLogger(__name__)
 
 class MomentumCalculator:
     def __init__(self):
-        self.massive_client= get_massive_client()
+        self.massive_client = get_massive_client()
         self.lookback= getattr(settings, "MOMENTUM_LOOKBACK_MONTHS", 12)
         self.skip_months= getattr (settings, "MOMENTUM_SKIP_MONTHS", 1)
     
@@ -31,17 +33,17 @@ class MomentumCalculator:
         
         try:
             price_12m= self._get_price_from_db(
-                stock, twelve_months_ago, tolerance_day= 7
+                stock, twelve_months_ago, tolerance_days= 7
             )
             price_1m= self._get_price_from_db(
-                stock, one_month_ago, tolerance_day= 7
+                stock, one_month_ago, tolerance_days= 7
             )
             
             if not price_12m:
-                price_12m= self._get.price_from_api(stock.ticker, twelve_months_ago)
+                price_12m= self._get_price_from_api(stock.ticker, twelve_months_ago)
             
             if not price_1m:
-                price_1m= self._get.price_from_api(stock.ticker, one_month_ago)
+                price_1m= self._get_price_from_api(stock.ticker, one_month_ago)
             
             if price_12m and price_1m and price_12m > 0:
                 momentum= (price_1m - price_12m) / price_12m
@@ -64,11 +66,17 @@ class MomentumCalculator:
         start_date= target_date - timedelta(days= tolerance_days)
         end_date= target_date + timedelta(days= tolerance_days)
         
-        price_data=(
-            stock.price_data.filter(date__gte= start_date, date__lte= end_date).order_by("date").first()
+        price_data = stock.price_data.filter(
+            date__gte=start_date, date__lte=end_date
+        ).order_by("date")
+        target_day = target_date.date() if hasattr(target_date, "date") else target_date
+        closest_price = min(
+            price_data,
+            key=lambda item: abs((item.date - target_day).days),
+            default=None,
         )
-        
-        return price_data.close if price_data else None
+
+        return closest_price.close if closest_price else None
     
     def _get_price_from_api(
         self, ticker: str, target_date: datetime
@@ -89,18 +97,47 @@ class MomentumCalculator:
         
         if stock_list is None:
             stock_list= Stock.objects.filter(is_active=True)
-        
+
+        stock_list = list(stock_list)
         momentum_scores=[]
-        tickers= [stock.ticker for stock in stock_list]
-        logger.info(f"Calculating momentum score for {len(stock_list)} stocks using bulk API fetch")
-        
+        stocks_missing_local_prices = []
+        period_start = calculation_date - timedelta(days=365)
+        period_end = calculation_date - timedelta(days=30)
+
+        for stock in stock_list:
+            price_12m = self._get_price_from_db(stock, period_start)
+            price_1m = self._get_price_from_db(stock, period_end)
+            if price_12m and price_1m and price_12m > 0:
+                score, _ = MomentumScore.objects.update_or_create(
+                    stock=stock,
+                    calculation_date=calculation_date,
+                    defaults={
+                        "momentum_score": (price_1m - price_12m) / price_12m,
+                        "period_start": period_start,
+                        "period_end": period_end,
+                    },
+                )
+                momentum_scores.append(score)
+            else:
+                stocks_missing_local_prices.append(stock)
+
+        if not stocks_missing_local_prices:
+            return momentum_scores
+
+        tickers = [stock.ticker for stock in stocks_missing_local_prices]
+        logger.info(
+            "Calculating momentum from Massive for %s stocks without local prices",
+            len(tickers),
+        )
+
         try:
             bulk_momentum_data= self.massive_client.fetch_bulk_momentum_data(
                 tickers= tickers, calculation_date= calculation_date
             )
             logger.info(f"Successfully fetched bulk momentum data for {len(bulk_momentum_data)} stocks")
-            
-            for stock in stock_list:
+
+            stocks_missing_api_prices = []
+            for stock in stocks_missing_local_prices:
                 try:
                     ticker_data= bulk_momentum_data.get(stock.ticker, {})
                     price_12m= ticker_data.get("price_12m")
@@ -116,8 +153,8 @@ class MomentumCalculator:
                                 calculation_date= calculation_date,
                                 defaults={
                                     "momentum_score": momentum_decimal,
-                                    "period_start": calculation_date - timedelta(days=365),
-                                    "period_end": calculation_date - timedelta(days=30),
+                                    "period_start": period_start,
+                                    "period_end": period_end,
                                 },
                             )
                         )
@@ -130,18 +167,28 @@ class MomentumCalculator:
                             f"Could not calculate momentum for {stock.ticker}:"
                             f"price_12m= {price_12m}, price_1m= {price_1m}"
                         )
+                        stocks_missing_api_prices.append(stock)
                 except (ValueError, TypeError) as e:
                     logger.error(f"Error processing momentum for {stock.ticker}: {str(e)}")
+                    stocks_missing_api_prices.append(stock)
             logger.info(
-                f"Processed {len(momentum_score)} momentum scores successfully"
+                f"Processed {len(momentum_scores)} momentum scores successfully"
             )
+            if stocks_missing_api_prices:
+                momentum_scores.extend(
+                    self._calculate_momentum_score_individual(
+                        stocks_missing_api_prices, calculation_date
+                    )
+                )
         
         except Exception as e:
             logger.error(f"Error in bulk momentum calculation: {str(e)}")
             
             logger.info("Falling back to individual API calls...")
-            return self._calculate_momentum_score_individual(
-                stock_list, calculation_date
+            momentum_scores.extend(
+                self._calculate_momentum_score_individual(
+                    stocks_missing_local_prices, calculation_date
+                )
             )
         
         return momentum_scores
@@ -193,7 +240,7 @@ class MomentumCalculator:
         if calculation_date is None:
             calculation_date= timezone.now().date()
             
-        MomentumScore.calculation_quintiles_for_date(calculation_date)
+        MomentumScore.calculate_quintiles_for_date(calculation_date)
         
         return MomentumScore.objects.filter(calculation_date= calculation_date).order_by("-momentum_score")
     
@@ -204,7 +251,7 @@ class MomentumCalculator:
         momentum_scores=(
             MomentumScore.objects.filter(
                 calculation_date= calculation_date, is_top_quintile= True
-            ).select_related("stock").order_by("-momentum score")
+            ).select_related("stock").order_by("-momentum_score")
         )
         return [score.stock for score in momentum_scores]
     
@@ -237,11 +284,13 @@ class MomentumCalculator:
     
     def backfill_price_data(self, stock: Stock, days_back: int = 420) -> int:
         end_date= timezone.now().date()
-        start_date= end_date -timedelta(days=days_back)
+        start_date = end_date - timedelta(days=days_back)
         
         try:
-            existing_data= stock.price_data_filter(date__gte= start_date).values_list(
-                "date", flat= True
+            existing_dates = set(
+                stock.price_data.filter(
+                    date__gte=start_date, date__lte=end_date
+                ).values_list("date", flat=True)
             )
             
             api_data= self.massive_client.fetch_stock_data(
@@ -250,26 +299,42 @@ class MomentumCalculator:
                 end_date= end_date.strftime("%Y-%m-%d")
             )
             
-            new_records= 0
+            new_records = []
             for data_point in api_data:
-                if data_point ["date"] not in existing_data:
-                    PriceData.objects.create(
-                        stock= stock,
-                        date= data_point["date"],
-                        open_price= Decimal(str(data_point["open"])),
-                        high= Decimal(str(data_point["high"])),
-                        low= Decimal(str(data_point["low"])),
-                        close= (str(data_point["close"])),
-                        volume= (data_point["volume"]),
-                        adjusted_close= Decimal(str(data_point["close"]))
+                bar_date = data_point["date"]
+                if isinstance(bar_date, str):
+                    bar_date = date.fromisoformat(bar_date)
+                if bar_date in existing_dates:
+                    continue
+
+                close = Decimal(str(data_point["close"]))
+                new_records.append(
+                    PriceData(
+                        stock=stock,
+                        date=bar_date,
+                        open_price=Decimal(str(data_point["open"])),
+                        high=Decimal(str(data_point["high"])),
+                        low=Decimal(str(data_point["low"])),
+                        close=close,
+                        volume=int(data_point.get("volume") or 0),
+                        ajusted_close=Decimal(
+                            str(data_point.get("adjusted_close") or close)
+                        ),
                     )
-                    new_records +=1
-                logger.info(f"Backfilled { new_records} price records for {stock.ticker}")
-                return new_records
+                )
+
+            if new_records:
+                PriceData.objects.bulk_create(new_records)
+            logger.info(
+                "Backfilled %s price records for %s",
+                len(new_records),
+                stock.ticker,
+            )
+            return len(new_records)
             
-        except (ValueError, TypeError):
+        except (KeyError, ValueError, TypeError) as error:
             logger.error(
-                f"Error backfilling data for {stock.ticker}: Invalid price data format"
+                "Error backfilling data for %s: %s", stock.ticker, error
             )
             return 0
         
@@ -313,12 +378,13 @@ class MomentumCalculator:
             "data_points_available": 0
         }
         
-        data_count= stock.price_data_filter(
-            date__gte= twelve_months_ago, date__lte= calculation_date
+        data_count = stock.price_data.filter(
+            date__gte=twelve_months_ago - timedelta(days=7),
+            date__lte=calculation_date,
         ).count()
         
         validation_result["data_points_available"] = data_count
-        validation_result["has_sufficient_data"] = data_count >= 280
+        validation_result["has_sufficient_data"] = data_count >= 240
         
         try:
             validation_result["momentum_score"]=  self.calculate_momentum_for_stock(

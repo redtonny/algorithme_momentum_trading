@@ -389,10 +389,10 @@ class MassiveApiClient:
             data = self.fetch_stock_data(
                 ticker= ticker,
                 start_date= start_date.strftime("%Y-%m-%d"),
-                end_date= start_date.strftime("%Y-%m-%d"),
+                end_date=end_date.strftime("%Y-%m-%d"),
             )
             if not data:
-                None
+                return None
             
             # Find the closest date
             target_date_obj =(
@@ -401,8 +401,8 @@ class MassiveApiClient:
             if hasattr(target_date_obj, "date"):
                 target_date_obj = target_date_obj.date()
             
-            closest_data= min(
-                data, key= lambda x: abs((x["date"] -  target_date_obj).days)
+            closest_data = min(
+                data, key=lambda item: abs((item["date"] - target_date_obj).days)
             )
             
             return float(closest_data["close"])
@@ -411,7 +411,14 @@ class MassiveApiClient:
             logger.error(f"Error getting price for {ticker} on {target_date}: {str(e)}")
             return None
         
+    #def get_sp500_tickers(self) -> List[str]:
         
-    def get_massive_client() -> MassiveApiClient:
+    
+    
+    @staticmethod
+    def get_massive_client() -> "MassiveApiClient":
         return MassiveApiClient()
+
+
+get_massive_client = MassiveApiClient.get_massive_client
     

@@ -1,0 +1,76 @@
+{% extends "trading/base.html" %}
+
+{% block title %}Scores momentum · Momentum Desk{% endblock %}
+{% block breadcrumb %}Scores momentum{% endblock %}
+
+{% block content %}
+<div class="page-head">
+	<div>
+		<p class="eyebrow">Univers de marché</p>
+		<h1>Scores momentum</h1>
+		<p class="page-subtitle">Classement des titres selon le dernier calcul disponible.</p>
+	</div>
+	<form class="filter-bar" method="get">
+		<label class="filter-field">Date de calcul
+			<input type="date" name="date" value="{% if selected_date %}{{ selected_date|date:'Y-m-d' }}{% endif %}">
+		</label>
+		<button class="btn" type="submit"><i class="bi bi-funnel"></i>Filtrer</button>
+	</form>
+</div>
+
+<section class="surface">
+	<div class="surface-head">
+		<h2>TOP 10</h2>
+		<span class="muted">{% if selected_date %}{{ selected_date|date:"d/m/Y" }}{% else %}Aucune date{% endif %}</span>
+	</div>
+	{% if top_scores %}
+		<div class="table-wrap">
+			<table>
+				<thead><tr><th>Rang</th><th>Ticker</th><th>Société</th><th>Score momentum</th><th>Quintile</th><th>Période</th></tr></thead>
+				<tbody>
+				{% for score in top_scores %}
+					<tr>
+						<td>{{ score.rank|default:"—" }}</td>
+						<td class="ticker">{{ score.stock.ticker }}</td>
+						<td>{{ score.stock.name|default:"—" }}</td>
+						<td class="{% if score.momentum_score >= 0 %}positive{% else %}negative{% endif %}"><strong>{{ score.momentum_score|floatformat:4 }}</strong></td>
+						<td><span class="badge">{{ score.quintile|default:"—" }}</span></td>
+						<td class="muted">{{ score.period_start|date:"d/m/Y" }} – {{ score.period_end|date:"d/m/Y" }}</td>
+					</tr>
+				{% endfor %}
+				</tbody>
+			</table>
+		</div>
+	{% else %}
+		<div class="empty-state"><i class="bi bi-bar-chart-line"></i>Aucun score ne correspond à cette date.</div>
+	{% endif %}
+</section>
+
+<section class="surface">
+	<div class="surface-head">
+		<h2>BOTTOM 10</h2>
+		<span class="muted">Les scores les plus faibles</span>
+	</div>
+	{% if bottom_scores %}
+		<div class="table-wrap">
+			<table>
+				<thead><tr><th>Rang</th><th>Ticker</th><th>Société</th><th>Score momentum</th><th>Quintile</th><th>Période</th></tr></thead>
+				<tbody>
+				{% for score in bottom_scores %}
+					<tr>
+						<td>{{ score.rank|default:"—" }}</td>
+						<td class="ticker">{{ score.stock.ticker }}</td>
+						<td>{{ score.stock.name|default:"—" }}</td>
+						<td class="{% if score.momentum_score >= 0 %}positive{% else %}negative{% endif %}"><strong>{{ score.momentum_score|floatformat:4 }}</strong></td>
+						<td><span class="badge">{{ score.quintile|default:"—" }}</span></td>
+						<td class="muted">{{ score.period_start|date:"d/m/Y" }} – {{ score.period_end|date:"d/m/Y" }}</td>
+					</tr>
+				{% endfor %}
+				</tbody>
+			</table>
+		</div>
+	{% else %}
+		<div class="empty-state"><i class="bi bi-bar-chart-line"></i>Aucun score ne correspond à cette date.</div>
+	{% endif %}
+</section>
+{% endblock %}

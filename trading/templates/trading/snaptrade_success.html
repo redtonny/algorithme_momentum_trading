@@ -1,0 +1,19 @@
+{% extends "trading/base.html" %}
+
+{% block title %}Compte connecté · Momentum Desk{% endblock %}
+{% block breadcrumb %}Connexion courtier{% endblock %}
+
+{% block content %}
+<div class="page-head">
+	<div>
+		<p class="eyebrow">Connexion courtier</p>
+		<h1>Compte connecté</h1>
+		<p class="page-subtitle">Le parcours de connexion SnapTrade est terminé.</p>
+	</div>
+</div>
+<section class="surface" style="max-width: 650px; padding: 26px;">
+	<p class="positive" style="font-size: 16px;"><i class="bi bi-check-circle-fill"></i> Connexion confirmée</p>
+	<p class="muted">Vous pouvez revenir à vos portefeuilles pour consulter les données disponibles.</p>
+	<a class="btn" href="{% url 'trading:portfolio_list' %}"><i class="bi bi-wallet2"></i>Ouvrir les portefeuilles</a>
+</section>
+{% endblock %}

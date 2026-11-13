@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="theme-color" content="#f4f5f2">
+    <title>{% block title %}Momentum Desk{% endblock %}</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+    <style>
+        :root {
+            color-scheme: light;
+            --ink: #18211d;
+            --muted: #78817c;
+            --paper: #f4f5f2;
+            --surface: #ffffff;
+            --line: #e5e9e5;
+            --green: #147d58;
+            --green-soft: #e7f3ed;
+            --red: #c55245;
+            --amber: #b17a20;
+            --nav: #18231e;
+        }
+        * { box-sizing: border-box; }
+        body { margin: 0; background: var(--paper); color: var(--ink); font: 14px/1.5 "DM Sans", sans-serif; }
+        a { color: inherit; text-decoration: none; }
+        button, input, textarea, select { font: inherit; }
+        .app-shell { min-height: 100vh; }
+        .sidebar { position: fixed; inset: 0 auto 0 0; z-index: 5; display: flex; width: 236px; flex-direction: column; padding: 25px 16px 18px; background: var(--nav); color: #eef5f0; }
+        .brand { display: flex; align-items: center; gap: 11px; padding: 0 10px 30px; font: 600 18px "Space Grotesk", sans-serif; letter-spacing: 0; }
+        .brand-mark { display: grid; width: 34px; height: 34px; place-items: center; border-radius: 9px; background: #b9e5c8; color: #153c2c; font-size: 17px; }
+        .nav-label { padding: 0 10px 9px; color: #87958d; font-size: 10px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase; }
+        .nav-list { display: grid; gap: 5px; }
+        .nav-link { display: flex; min-height: 42px; align-items: center; gap: 11px; padding: 0 11px; border-radius: 6px; color: #c2cdc6; font-size: 13px; font-weight: 500; transition: background .18s ease, color .18s ease; }
+        .nav-link i { width: 17px; color: #9eaaa2; font-size: 15px; }
+        .nav-link:hover, .nav-link.active { background: #2a3931; color: #fff; }
+        .nav-link.active i { color: #b9e5c8; }
+        .sidebar-foot { margin-top: auto; padding: 15px 10px 0; border-top: 1px solid #344239; color: #96a49b; font-size: 11px; }
+        .main-column { min-height: 100vh; margin-left: 236px; }
+        .topbar { display: flex; min-height: 64px; align-items: center; justify-content: space-between; padding: 0 36px; border-bottom: 1px solid var(--line); background: rgba(255,255,255,.76); }
+        .topbar-label { color: var(--muted); font-size: 12px; }
+        .market-state { display: inline-flex; align-items: center; gap: 8px; color: #4b6556; font-size: 12px; font-weight: 600; }
+        .market-state::before { width: 7px; height: 7px; border-radius: 50%; background: #45a576; content: ""; }
+        .content { width: min(1280px, 100%); margin: 0 auto; padding: 34px 36px 52px; }
+        .page-head { display: flex; align-items: flex-end; justify-content: space-between; gap: 18px; margin-bottom: 25px; }
+        .eyebrow { margin: 0 0 5px; color: var(--green); font-size: 10px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase; }
+        h1, h2, h3, p { margin-top: 0; }
+        h1 { margin-bottom: 5px; font: 600 27px/1.2 "Space Grotesk", sans-serif; letter-spacing: 0; }
+        .page-subtitle { margin: 0; color: var(--muted); font-size: 13px; }
+        .section-heading { display: flex; align-items: center; justify-content: space-between; gap: 16px; margin: 0 0 13px; }
+        .section-heading h2 { margin: 0; font: 600 15px "Space Grotesk", sans-serif; letter-spacing: 0; }
+        .section-heading a, .text-link { color: var(--green); font-size: 12px; font-weight: 700; }
+        .metric-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; margin-bottom: 25px; }
+        .metric { min-height: 116px; padding: 17px 18px; border: 1px solid var(--line); border-radius: 7px; background: var(--surface); }
+        .metric-label { display: flex; align-items: center; justify-content: space-between; color: var(--muted); font-size: 12px; }
+        .metric-label i { color: var(--green); font-size: 16px; }
+        .metric-value { margin: 13px 0 0; font: 600 25px/1 "Space Grotesk", sans-serif; letter-spacing: 0; }
+        .metric-note { margin: 7px 0 0; color: var(--muted); font-size: 11px; }
+        .content-grid { display: grid; grid-template-columns: minmax(0, 1.45fr) minmax(280px, .9fr); gap: 16px; }
+        .surface { overflow: hidden; border: 1px solid var(--line); border-radius: 7px; background: var(--surface); }
+        .surface-head { display: flex; min-height: 55px; align-items: center; justify-content: space-between; gap: 12px; padding: 0 18px; border-bottom: 1px solid var(--line); }
+        .surface-head h2 { margin: 0; font: 600 14px "Space Grotesk", sans-serif; letter-spacing: 0; }
+        .table-wrap { overflow-x: auto; }
+        table { width: 100%; border-collapse: collapse; text-align: left; white-space: nowrap; }
+        th { padding: 11px 16px; background: #fafbf9; color: #818b84; font-size: 10px; font-weight: 700; letter-spacing: .5px; text-transform: uppercase; }
+        td { padding: 12px 16px; border-top: 1px solid #edf0ed; font-size: 12px; }
+        tbody tr:hover { background: #fbfcfa; }
+        .ticker { font-weight: 700; }
+        .muted { color: var(--muted); }
+        .positive { color: var(--green); }
+        .negative { color: var(--red); }
+        .badge { display: inline-flex; align-items: center; gap: 5px; padding: 4px 8px; border-radius: 4px; background: #f0f2f0; color: #56615a; font-size: 10px; font-weight: 700; }
+        .badge-buy, .badge-completed { background: var(--green-soft); color: var(--green); }
+        .badge-sell, .badge-failed { background: #faecea; color: var(--red); }
+        .badge-hold, .badge-pending { background: #fbf3e5; color: var(--amber); }
+        .empty-state { padding: 34px 20px; color: var(--muted); text-align: center; }
+        .empty-state i { display: block; margin-bottom: 9px; color: #9eaaa2; font-size: 24px; }
+        .btn { display: inline-flex; min-height: 38px; align-items: center; justify-content: center; gap: 8px; padding: 0 13px; border: 1px solid transparent; border-radius: 5px; background: var(--green); color: white; cursor: pointer; font-size: 12px; font-weight: 700; transition: background .18s ease; }
+        .btn:hover { background: #106749; }
+        .btn-secondary { border-color: var(--line); background: white; color: var(--ink); }
+        .btn-secondary:hover { background: #f6f8f5; }
+        .btn-danger { background: var(--red); }
+        .filter-bar { display: flex; flex-wrap: wrap; align-items: end; gap: 10px; }
+        .filter-field { display: grid; gap: 5px; color: var(--muted); font-size: 11px; font-weight: 600; }
+        input, textarea, select { width: 100%; min-height: 38px; padding: 8px 10px; border: 1px solid #dce2dc; border-radius: 5px; outline: none; background: #fff; color: var(--ink); }
+        input:focus, textarea:focus, select:focus { border-color: #54a37f; box-shadow: 0 0 0 3px #e6f2eb; }
+        .form-surface { max-width: 650px; padding: 24px; }
+        .form-surface form p { display: grid; gap: 7px; margin-bottom: 17px; }
+        .form-surface label { font-size: 12px; font-weight: 700; }
+        .form-surface .helptext { color: var(--muted); font-size: 11px; }
+        .form-surface ul.errorlist { margin: 0; padding-left: 17px; color: var(--red); font-size: 12px; }
+        .alert { margin-bottom: 14px; padding: 11px 14px; border: 1px solid #d6e8dc; border-radius: 5px; background: #edf7f0; color: #246648; font-size: 12px; }
+        .alert-error { border-color: #f0d6d3; background: #fcf0ee; color: #9c3e35; }
+        .detail-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; margin-bottom: 20px; }
+        .detail-stat { padding: 15px 17px; border: 1px solid var(--line); border-radius: 6px; background: var(--surface); }
+        .detail-stat span { display: block; color: var(--muted); font-size: 11px; }
+        .detail-stat strong { display: block; margin-top: 6px; font: 600 18px "Space Grotesk", sans-serif; }
+        .confirm-box { max-width: 580px; padding: 25px; border: 1px solid #f0d6d3; border-radius: 7px; background: white; }
+        .confirm-box h2 { margin-bottom: 8px; font: 600 19px "Space Grotesk", sans-serif; }
+        .confirm-box p { color: var(--muted); }
+        .button-row { display: flex; flex-wrap: wrap; gap: 9px; margin-top: 20px; }
+        @media (max-width: 960px) {
+            .sidebar { width: 205px; }
+            .main-column { margin-left: 205px; }
+            .content { padding-right: 24px; padding-left: 24px; }
+            .topbar { padding: 0 24px; }
+            .metric-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+            .content-grid { grid-template-columns: 1fr; }
+        }
+        @media (max-width: 640px) {
+            .sidebar { position: static; width: auto; min-height: auto; padding: 12px 12px 9px; }
+            .brand { padding: 0 5px 12px; }
+            .nav-label, .sidebar-foot { display: none; }
+            .nav-list { display: flex; overflow-x: auto; gap: 5px; }
+            .nav-link { min-width: max-content; min-height: 36px; padding: 0 10px; font-size: 11px; }
+            .main-column { margin-left: 0; }
+            .topbar { min-height: 48px; padding: 0 16px; }
+            .content { padding: 24px 15px 38px; }
+            .page-head { align-items: flex-start; flex-direction: column; margin-bottom: 20px; }
+            h1 { font-size: 23px; }
+            .metric { min-height: 102px; padding: 14px; }
+            .metric-value { font-size: 22px; }
+            .detail-grid { grid-template-columns: 1fr; }
+            .surface-head { padding: 0 13px; }
+            th, td { padding-right: 12px; padding-left: 12px; }
+        }
+    </style>
+</head>
+<body>
+<div class="app-shell">
+    <aside class="sidebar">
+        <a class="brand" href="{% url 'trading:dashboard' %}">
+            <span class="brand-mark"><i class="bi bi-graph-up-arrow"></i></span>
+            <span>Momentum Desk</span>
+        </a>
+        <p class="nav-label">Marchés</p>
+        <nav class="nav-list" aria-label="Navigation principale">
+            <a class="nav-link {% if request.resolver_match.url_name == 'dashboard' %}active{% endif %}" href="{% url 'trading:dashboard' %}"><i class="bi bi-grid-1x2"></i>Vue d’ensemble</a>
+            <a class="nav-link {% if request.resolver_match.url_name == 'momentum_scores' %}active{% endif %}" href="{% url 'trading:momentum_scores' %}"><i class="bi bi-bar-chart-line"></i>Scores momentum</a>
+            <a class="nav-link {% if request.resolver_match.url_name == 'trading_signals' %}active{% endif %}" href="{% url 'trading:trading_signals' %}"><i class="bi bi-broadcast"></i>Signaux</a>
+        </nav>
+        <p class="nav-label" style="margin-top: 25px;">Gestion</p>
+        <nav class="nav-list" aria-label="Gestion des portefeuilles">
+            <a class="nav-link {% if request.resolver_match.url_name == 'portfolio_list' or request.resolver_match.url_name == 'portfolio_detail' or request.resolver_match.url_name == 'create_portfolio' %}active{% endif %}" href="{% url 'trading:portfolio_list' %}"><i class="bi bi-wallet2"></i>Portefeuilles</a>
+        </nav>
+        <div class="sidebar-foot">Momentum Trading · espace de suivi</div>
+    </aside>
+    <div class="main-column">
+        <header class="topbar">
+            <span class="topbar-label">Espace de travail / <strong>{% block breadcrumb %}Vue d’ensemble{% endblock %}</strong></span>
+            <span class="market-state">Données du projet</span>
+        </header>
+        <main class="content">
+            {% if messages %}
+                {% for message in messages %}
+                    <div class="alert{% if message.tags == 'error' %} alert-error{% endif %}" role="status">{{ message }}</div>
+                {% endfor %}
+            {% endif %}
+            {% block content %}{% endblock %}
+        </main>
+    </div>
+</div>
+</body>
+</html>

@@ -21,7 +21,7 @@ class PriceData(models.Model):
     high= models.DecimalField(max_digits=12, decimal_places=4)
     low= models.DecimalField(max_digits=12, decimal_places=4)
     close= models.DecimalField(max_digits=12, decimal_places=4)
-    volume= models.BigIntegerField
+    volume= models.BigIntegerField(default=0)
     ajusted_close= models.DecimalField(max_digits=12, decimal_places=4, null=True, blank=True)
     created_at= models.DateTimeField(auto_now_add=True)
 
@@ -51,12 +51,12 @@ class MomentumScore(models.Model):
         total_stocks= scores.count()
         quintile_size= total_stocks // 5
         
-        for i, score in enumerate[any](scores):
+        for i, score in enumerate(scores):
             score.rank= i +1
             quintile= min(5, (i // quintile_size) + 1) if quintile_size > 0 else 1
             score.quintile= quintile
             score.is_top_quintile= score.quintile == 1
-            score.save(update_fiels= ["rank", "quintile", "is_top_quintile"])
+            score.save(update_fields=["rank", "quintile", "is_top_quintile"])
             
             
 class TradingSignal(models.Model):
@@ -68,6 +68,13 @@ class TradingSignal(models.Model):
     stock=models.ForeignKey(
                 Stock, on_delete=models.CASCADE, related_name="trading_signals"
             )
+    portfolio = models.ForeignKey(
+        "portfolio.Portfolio",
+        on_delete=models.CASCADE,
+        related_name="signals",
+        null=True,
+        blank=True,
+    )
     signal_date= models.DateField(db_index=True)
     signal_type= models.CharField(max_length=4, choices=SIGNAL_TYPES)
     momemtum_score= models.ForeignKey(

@@ -1,0 +1,26 @@
+{% extends "trading/base.html" %}
+
+{% block title %}Supprimer {{ portfolio.name }} · Momentum Desk{% endblock %}
+{% block breadcrumb %}<a href="{% url 'trading:portfolio_list' %}">Portefeuilles</a> / Suppression{% endblock %}
+
+{% block content %}
+<div class="page-head">
+	<div>
+		<p class="eyebrow">Action irréversible</p>
+		<h1>Supprimer un portefeuille</h1>
+		<p class="page-subtitle">Vérifiez le portefeuille avant de confirmer.</p>
+	</div>
+</div>
+
+<section class="confirm-box">
+	<h2>{{ portfolio.name }}</h2>
+	<p>La suppression du portefeuille effacera aussi ses positions, ordres et données de performance associés.</p>
+	<form method="post">
+		{% csrf_token %}
+		<div class="button-row">
+			<button class="btn btn-danger" type="submit"><i class="bi bi-trash3"></i>Supprimer définitivement</button>
+			<a class="btn btn-secondary" href="{% url 'trading:portfolio_detail' portfolio.id %}">Conserver</a>
+		</div>
+	</form>
+</section>
+{% endblock %}

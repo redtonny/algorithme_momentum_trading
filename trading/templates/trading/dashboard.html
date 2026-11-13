@@ -1,0 +1,107 @@
+{% extends "trading/base.html" %}
+
+{% block title %}Vue d’ensemble · Momentum Desk{% endblock %}
+{% block breadcrumb %}Vue d’ensemble{% endblock %}
+
+{% block content %}
+<div class="page-head">
+	<div>
+		<p class="eyebrow">Tableau de bord</p>
+		<h1>Vue d’ensemble</h1>
+		<p class="page-subtitle">Suivi des marchés et de votre activité momentum.</p>
+	</div>
+	<a class="btn" href="{% url 'trading:portfolio_list' %}"><i class="bi bi-wallet2"></i>Voir les portefeuilles</a>
+</div>
+
+<section class="metric-grid" aria-label="Indicateurs principaux">
+	<article class="metric">
+		<div class="metric-label">Titres actifs <i class="bi bi-buildings"></i></div>
+		<p class="metric-value">{{ active_stock_count }}</p>
+		<p class="metric-note">Univers suivi</p>
+	</article>
+	<article class="metric">
+		<div class="metric-label">Portefeuilles <i class="bi bi-wallet2"></i></div>
+		<p class="metric-value">{{ portfolio_count }}</p>
+		<p class="metric-note">Portefeuilles actifs</p>
+	</article>
+	<article class="metric">
+		<div class="metric-label">Signaux récents <i class="bi bi-broadcast"></i></div>
+		<p class="metric-value">{{ latest_signals|length }}</p>
+		<p class="metric-note">Derniers signaux affichés</p>
+	</article>
+	<article class="metric">
+		<div class="metric-label">Dernier calcul <i class="bi bi-clock-history"></i></div>
+		<p class="metric-value" style="font-size: 18px;">{% if latest_score_date %}{{ latest_score_date|date:"d/m/Y" }}{% else %}—{% endif %}</p>
+		<p class="metric-note">Scores de momentum</p>
+	</article>
+</section>
+
+<div class="content-grid">
+	<section class="surface">
+		<div class="surface-head">
+			<h2>Meilleurs scores momentum</h2>
+			<a class="text-link" href="{% url 'trading:momentum_scores' %}">Tous les scores <i class="bi bi-arrow-right"></i></a>
+		</div>
+		{% if top_scores %}
+			<div class="table-wrap">
+				<table>
+					<thead><tr><th>Rang</th><th>Titre</th><th>Secteur</th><th>Score</th></tr></thead>
+					<tbody>
+					{% for score in top_scores %}
+						<tr>
+							<td class="muted">{{ score.rank|default:"—" }}</td>
+							<td><span class="ticker">{{ score.stock.ticker }}</span><br><span class="muted">{{ score.stock.name|default:"—" }}</span></td>
+							<td class="muted">{{ score.stock.sector|default:"Non classé" }}</td>
+							<td class="{% if score.momentum_score >= 0 %}positive{% else %}negative{% endif %}"><strong>{{ score.momentum_score|floatformat:4 }}</strong></td>
+						</tr>
+					{% endfor %}
+					</tbody>
+				</table>
+			</div>
+		{% else %}
+			<div class="empty-state"><i class="bi bi-bar-chart-line"></i>Aucun score calculé pour le moment.</div>
+		{% endif %}
+	</section>
+
+	<section class="surface">
+		<div class="surface-head">
+			<h2>Signaux récents</h2>
+			<a class="text-link" href="{% url 'trading:trading_signals' %}">Tout voir <i class="bi bi-arrow-right"></i></a>
+		</div>
+		{% if latest_signals %}
+			<div class="table-wrap">
+				<table>
+					<thead><tr><th>Titre</th><th>Type</th><th>Date</th></tr></thead>
+					<tbody>
+					{% for signal in latest_signals %}
+						<tr>
+							<td class="ticker">{{ signal.stock.ticker }}</td>
+							<td><span class="badge badge-{{ signal.signal_type|lower }}">{{ signal.get_signal_type_display }}</span></td>
+							<td class="muted">{{ signal.signal_date|date:"d/m/Y" }}</td>
+						</tr>
+					{% endfor %}
+					</tbody>
+				</table>
+			</div>
+		{% else %}
+			<div class="empty-state"><i class="bi bi-broadcast"></i>Aucun signal disponible.</div>
+		{% endif %}
+	</section>
+</div>
+
+{% if latest_rebalance %}
+<section class="surface" style="margin-top: 16px;">
+	<div class="surface-head"><h2>Dernier rééquilibrage</h2><span class="muted">{{ latest_rebalance.date|date:"d/m/Y" }}</span></div>
+	<div class="table-wrap">
+		<table><thead><tr><th>Statut</th><th>Titres analysés</th><th>Achats</th><th>Ventes</th><th>Valeur portefeuille</th></tr></thead>
+		<tbody><tr>
+			<td><span class="badge badge-{{ latest_rebalance.execution_status|lower }}">{{ latest_rebalance.get_execution_status_display }}</span></td>
+			<td>{{ latest_rebalance.total_stocks_analyzed }}</td>
+			<td>{{ latest_rebalance.buy_signals_generated }}</td>
+			<td>{{ latest_rebalance.sell_signals_generated }}</td>
+			<td>{% if latest_rebalance.total_portfolio_value %}{{ latest_rebalance.total_portfolio_value|floatformat:2 }}{% else %}—{% endif %}</td>
+		</tr></tbody></table>
+	</div>
+</section>
+{% endif %}
+{% endblock %}
